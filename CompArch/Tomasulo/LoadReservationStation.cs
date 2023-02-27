@@ -21,9 +21,9 @@ public class LoadReservationStation : ReservationStation
     public string Address => $"M[{Offset}+{SourceRegister}]";
 
 
-    public override void AddInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration, int writebackDuration)
+    public override void IssueInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration, int writebackDuration)
     {
-        base.AddInstruction(instruction, issueTime, issueDuration, executionDuration, writebackDuration);
+        base.IssueInstruction(instruction, issueTime, issueDuration, executionDuration, writebackDuration);
 
         //LD R1, 0(R2)
         var m = Regex.Match(instruction.Operand2!,
@@ -41,15 +41,15 @@ public class LoadReservationStation : ReservationStation
 
     }
 
-    public override void ProceedTime()
+    public override void GotoNextCycle()
     {
-        base.ProceedTime();
+        base.GotoNextCycle();
 
         if (CurrentTime == LastWriteBackTime
                 && Status == ReservationStationStatus.WriteBackStarted) //WRITE BACK (broadcast value to CDB)
         {
             //write to cdb at the end of the WB 
-            WriteToCDB();
+            Parent.WriteToCDB(this,CurrentTime);
 
 
             Reset();

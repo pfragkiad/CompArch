@@ -36,10 +36,13 @@ public class Scenarios
 
     public void RunManualScenario()
     {
+        //setup functional units
+        _tomasulo.AddFunctionalUnits("Adder", 1);
+
         //setup reservation stations
         _tomasulo.AddLoadReservationStations(2, "LD");
-        _tomasulo.AddCalcReservationStations("Add", 2, 2, "ADD", "SUB");
-        _tomasulo.AddCalcReservationStations("Mult", 2, 2, "MUL", "DIV");
+        _tomasulo.AddCalcReservationStations("Add", 2, "Adder", "ADD", "SUB");
+        _tomasulo.AddCalcReservationStations("Mult", 2, null, "MUL", "DIV");
 
         //setup code and execution times
         string code = @"
@@ -58,7 +61,7 @@ public class Scenarios
 
         List<string> registers = Enumerable.Range(1, 8).Select(i => $"R{i}").ToList();
 
-        _tomasulo.SetInstructions(code, registers, executionTimes, 1, 1, 5);
+        _tomasulo.SetCode(code, registers, executionTimes, 1, 1, 5);
 
         _tomasulo.Run();
     }
@@ -233,7 +236,7 @@ MUL R5,R4,R8
 
 
         //we should verify that instructions are include the required register
-        _tomasulo.SetInstructions(code, registers, executionTimes, _options);
+        _tomasulo.SetCode(code, registers, executionTimes, _options);
 
         _tomasulo.Run();
     }

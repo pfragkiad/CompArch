@@ -14,6 +14,7 @@ public enum ReservationStationStatus
     NotBusy,
     IssueStarted,
     WaitForDependencies,
+    WaitForFunctionalUnit,
     ExecutionStarted,
     WriteBackStarted
 }
@@ -47,7 +48,7 @@ public abstract class ReservationStation
 
     public Instruction? Instruction { protected set; get; }
 
-    public int CurrentTime { protected set; get; }
+    public int CurrentTime => Parent.CurrentCycle;  //{ protected set; get; }
 
     //In general StartIssueTime = LastIssueTime (cycle = 1)
 
@@ -82,13 +83,18 @@ public abstract class ReservationStation
 
     public int Index { get; }
 
-    public virtual void AddInstruction(Instruction instruction, int issueTime,
+    public virtual void IssueInstruction(Instruction instruction, int issueTime,
         int issueDuration, int executionDuration, int writebackDuration)
     {
         Instruction = instruction;
         Status = ReservationStationStatus.IssueStarted;
 
-        CurrentTime = StartIssueTime = issueTime;
+        instruction.Issue = issueTime;
+        instruction.IssueEnd = instruction.Issue + issueDuration - 1;
+
+        Console.WriteLine($"  Issuing/Adding command '{instruction.Command}' to {Name}...");
+
+        StartIssueTime = issueTime;
 
         //the following 2 are global settings
         IssueDuration = issueDuration;
@@ -96,11 +102,9 @@ public abstract class ReservationStation
         WriteBackDuration = writebackDuration;
     }
 
-    public virtual void ProceedTime()
+    public virtual void GotoNextCycle()
     {
         if (!IsBusy) return;
-
-        CurrentTime++;
 
         if (CurrentTime == LastIssueTime + 1)
             Status = ReservationStationStatus.WaitForDependencies;
@@ -119,36 +123,7 @@ public abstract class ReservationStation
         Status = ReservationStationStatus.NotBusy;
     }
 
-    public virtual void WriteToCDB()
-    {
-        string result = Parent.GetNextValue();
-
-        Console.WriteLine($"  Writing value to CDB: {Name}->{result}");
-
-        foreach (var otherRs in Parent.AllCalcReservationStations.Where(rs => rs.Qk == this))
-        {
-            otherRs.Vk = result;  //Instruction!.Operand1; //should be the result sth like R[R1]
-            otherRs.Qk = null;
-
-            if (otherRs.Qj is null)
-                otherRs.StartExecutionTime = CurrentTime + 1;
-        }
-
-        foreach (var otherRs in Parent.AllCalcReservationStations.Where(rs => rs.Qj == this))
-        {
-            otherRs.Vj = result; //Instruction!.Operand1;
-            otherRs.Qj = null;
-
-            if (otherRs.Qk is null)
-                otherRs.StartExecutionTime = CurrentTime + 1;
-        }
-
-        foreach(var entry in Parent.RegisterFile)
-        {
-            if (entry.Value == Name)  //check if there is a value of the rs
-                Parent.RegisterFile[entry.Key] = result;
-        }
-    }
+  
 
 
 }

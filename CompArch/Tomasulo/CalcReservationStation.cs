@@ -31,9 +31,9 @@ public class CalcReservationStation : ReservationStation
 
     public string? TargetRegister { get; private set; }
 
-    public override void AddInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration, int writebackDuration)
+    public override void IssueInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration, int writebackDuration)
     {
-        base.AddInstruction(instruction, issueTime, issueDuration, executionDuration, writebackDuration);
+        base.IssueInstruction(instruction, issueTime, issueDuration, executionDuration, writebackDuration);
         //this must not be null
         TargetRegister = instruction.Operand1!;
 
@@ -59,24 +59,26 @@ public class CalcReservationStation : ReservationStation
         //update the register file! (RAT)
         Parent.RegisterFile[TargetRegister] = Name;
 
-        if (Vj is not null & Vk is not null)
-        {
-            int FUs = Parent.AvailableFunctionalUnits[CategoryName];
-            if (FUs > 0)
-            {
-                Console.WriteLine($"  {Name} reserves FU. FUs({CategoryName}): {FUs}->{FUs-1}");
-                Parent.AvailableFunctionalUnits[CategoryName]--;
-                StartExecutionTime = issueTime + issueDuration;
-            }
-        }
+
+        //if (Vj is not null & Vk is not null)
+        //{
+            
+        //    int FUs = Parent.AvailableFunctionalUnits[CategoryName];
+        //    if (FUs > 0)
+        //    {
+        //        Console.WriteLine($"  {Name} reserves FU. FUs({CategoryName}): {FUs}->{FUs - 1}");
+        //        Parent.AvailableFunctionalUnits[CategoryName]--;
+        //        StartExecutionTime = issueTime + issueDuration;
+        //    }
+        //}
 
     }
 
-    public override void ProceedTime() //same with Load RS
+    public override void GotoNextCycle() //same with Load RS
     {
-        base.ProceedTime();
+        base.GotoNextCycle();
 
-        if(CurrentTime ==LastExecutionTime)
+        if (CurrentTime == LastExecutionTime)
         {
             int FUs = Parent.AvailableFunctionalUnits[CategoryName];
             Console.WriteLine($"  {Name} releases FU. FUs({CategoryName}): {FUs}->{FUs + 1}");
@@ -87,7 +89,7 @@ public class CalcReservationStation : ReservationStation
                 && Status == ReservationStationStatus.WriteBackStarted) //WRITE BACK (broadcast value to CDB)
         {
             //write to cdb at the end of the WB 
-            WriteToCDB();
+            Parent.WriteToCDB(this, CurrentTime);
 
             Reset();
         }
@@ -99,21 +101,23 @@ public class CalcReservationStation : ReservationStation
     {
         if (!IsBusy) return $"{Name}, Busy: No";
 
-        if (CurrentTime <=LastIssueTime)
+        if (CurrentTime <= LastIssueTime)
             return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: ISSUE, Remaining Time: {LastIssueTime - CurrentTime}";
 
-        if(!IsReady)
+        if (!IsReady)
             return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT, Vj: {Vj ?? "-"}, Vk: {Vk ?? "-"}, Qj: {Qj?.Name ?? "-"}, Qk: {Qk?.Name ?? "-"}";
 
-        if (CurrentTime <= LastExecutionTime && CurrentTime >=StartExecutionTime)
+        if (CurrentTime <= LastExecutionTime && CurrentTime >= StartExecutionTime)
             return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: EXECUTE, Vj: {Vj}, Vk: {Vk}, Remaining Time: {LastExecutionTime - CurrentTime}";
 
-        if(CurrentTime <=LastWriteBackTime) //if(CurrentTime<LastExecutionTime)
-            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WRITEBACK, Vj: {Vj}, Vk: {Vk}, Remaining Time: {LastWriteBackTime-CurrentTime}";
+        if (CurrentTime <= LastWriteBackTime) //if(CurrentTime<LastExecutionTime)
+            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WRITEBACK, Vj: {Vj}, Vk: {Vk}, Remaining Time: {LastWriteBackTime - CurrentTime}";
 
         throw new InvalidOperationException();
         //we assume the RS is not busy in any other case
         //return $"{Name}, Busy: No";
     }
+
+
 
 }

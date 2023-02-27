@@ -1,0 +1,26 @@
+#functional units
+#<name>,<count>
+Adder,1
+
+#reservation stations
+#('Load' must be always included)
+#<name>,<count>[,<functional unit>]
+Load,1
+Add,2,Adder
+Mult,1
+
+#commands 
+#<command>,<duration>,<reservation station>
+LD,1,Load
+ADD,2,Add
+SUB,2,Add
+MUL,4,Mult
+
+#registers
+R1-R5,R8
+
+#code
+LD R1,0(R2)
+ADD R3,R4,R1
+SUB R5,R4,R1
+MUL R5,R4,R8  

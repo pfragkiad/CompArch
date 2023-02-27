@@ -6,6 +6,7 @@ using System.Reflection.Metadata;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace CompArch.Tomasulo;
 public class Tomasulo
@@ -48,7 +49,7 @@ public class Tomasulo
 
     public Dictionary<string, int> AvailableFunctionalUnits { get; private set; }
 
-    public void AddFunctionalUnits (string name, int count)
+    public void AddFunctionalUnits(string name, int count)
     {
         AvailableFunctionalUnits ??= new Dictionary<string, int>();
         AvailableFunctionalUnits.Add(name, count);
@@ -59,17 +60,21 @@ public class Tomasulo
     #region Calc RS
 
     public Dictionary<string, HashSet<string>> CalcCommands { get; private set; }
+
+    public Dictionary<string, string> CalcCommandReservationStations { get; private set; }
+
     public Dictionary<string, List<CalcReservationStation>> CalcReservationStations { get; private set; }
 
     public void AddCalcReservationStations(
-        string name, int calcReservationStationsCount, 
-        string? functionalUnitsName,  params string[] calcCommands)
+        string reservationStationName, int calcReservationStationsCount,
+        string? functionalUnitsName, params string[] calcCommands)
     {
         CalcReservationStations ??= new Dictionary<string, List<CalcReservationStation>>();
 
-        CalcReservationStations.Add(name,
-           Enumerable.Range(1, calcReservationStationsCount).Select(i => {
-               var rs = new CalcReservationStation(name, i, this);
+        CalcReservationStations.Add(reservationStationName,
+           Enumerable.Range(1, calcReservationStationsCount).Select(i =>
+           {
+               var rs = new CalcReservationStation(reservationStationName, i, this);
 
                if (!string.IsNullOrWhiteSpace(functionalUnitsName)) rs.AssignedFunctionalUnitsName = functionalUnitsName;
                return rs;
@@ -77,7 +82,11 @@ public class Tomasulo
            ).ToList());
 
         CalcCommands ??= new Dictionary<string, HashSet<string>>();
-        CalcCommands.Add(name, calcCommands.ToHashSet());
+        CalcCommands.Add(reservationStationName, calcCommands.ToHashSet());
+
+        CalcCommandReservationStations ??= new Dictionary<string, string>();
+        foreach (var command in calcCommands)
+            CalcCommandReservationStations.Add(command, reservationStationName);
     }
 
     #endregion
@@ -98,7 +107,7 @@ public class Tomasulo
     //superscalar settings
     int _issuesPerCycle = 1;
     public int IssuesPerCycle { get => _issuesPerCycle; }
-  
+
     int _issueDuration = 1;
     public int IssueDuration { get => _issueDuration; }
 
@@ -113,13 +122,13 @@ public class Tomasulo
     Dictionary<string, int>? _executionTimes;
     public Dictionary<string, int>? ExecutionTimes { get => _executionTimes; set => _executionTimes = value; }
 
-    public void SetInstructions(string code,
+    public void SetCode(string code,
         List<string> registers,
         Dictionary<string, int> executionTimes,
         TomasuloOptions options) =>
-        SetInstructions(code, registers, executionTimes,options.IssuesPerCycle,options.IssueDuration,options.WriteBackDuration);
-    
-    public void SetInstructions(
+        SetCode(code, registers, executionTimes, options.IssuesPerCycle, options.IssueDuration, options.WriteBackDuration);
+
+    public void SetCode(
         string code,
         List<string> registers,
         Dictionary<string, int> executionTimes,
@@ -133,13 +142,13 @@ public class Tomasulo
 
         bool areInstructionRegistersIncluded =
             instructionRegisters.All(r => registers.Contains(r));
-        if(!areInstructionRegistersIncluded)
+        if (!areInstructionRegistersIncluded)
         {
             //get non-included registers
             var nonIncludedRegisters =
                 instructionRegisters.Where(r => !registers.Contains(r));
             throw new InvalidOperationException(
-                $"The following registers are not declared: {string.Join(", ",nonIncludedRegisters)}");
+                $"The following registers are not declared: {string.Join(", ", nonIncludedRegisters)}");
         }
 
         this._executionTimes = executionTimes;
@@ -148,95 +157,162 @@ public class Tomasulo
         _issueDuration = issueDuration;
         _writeBackDuration = writeBackDuration;
 
+
+
         SetRegisters(registers);
 
     }
     #endregion
 
 
+    public int CurrentCycle { get; private set; }
+
+    public Queue<Instruction> InstructionsQueue { get; private set; }
+
     public void Run()
     {
-        int iStartCycle = 0;
-        int iCycle = iStartCycle; // instructions[0].Issue!.Value;
-        Queue<Instruction> instructionsQueue = new Queue<Instruction>(instructions!);
-        while (instructionsQueue.Any()
-            || AllReservationStations.Any(s => s.IsBusy))
+        if(this.instructions is null || instructions.Count==0)
         {
-            iCycle++;
+            Console.WriteLine("No instructions to process.");
+            return;
+        }
 
-            Console.WriteLine($"\nCYCLE: {iCycle}");
+        const int iStartCycle = 0;
+        CurrentCycle = iStartCycle;
+        InstructionsQueue = new Queue<Instruction>(this.instructions);
 
-            Console.WriteLine("EVENTS:");
+        // instructions[0].Issue!.Value;
+        //Queue<Instruction> instructionsQueue = new Queue<Instruction>(instructions!);
+        //LinkedList<Instruction> instructions = new LinkedList<Instruction>(this.instructions!);
 
-            //for each reservation station update the status and time
-            var runningRSs = AllReservationStations.Where(rs => rs.IsBusy).ToList();
-            foreach (var rs in runningRSs)
-                rs.ProceedTime();
+        List<Instruction> instructionsWaitingForRS = new List<Instruction>();
 
-            //issue new commands 
-            Queue<Instruction> currentCycleInstructions = new Queue<Instruction>();
-            if (instructionsQueue.Any())
+        while (InstructionsQueue.Any() || AllReservationStations.Any(s => s.IsBusy))
+        {
+            //if there is a non-issed instruction then STALL until its corresponding RS is ready
+            do
             {
-                for (int i = 0; i < _issuesPerCycle; i++)
-                {
-                    if (!instructionsQueue.Any()) break;
+                ProceedCycleAndUpdateRS();
 
-                    var next = instructionsQueue.Dequeue();
-                    currentCycleInstructions.Enqueue(next);
-                    next.Issue = iCycle;
-                    next.IssueEnd = next.Issue + _issueDuration - 1;
-                    Console.WriteLine($"  Issuing command '{next.Command}'...");
+                for (int i = instructionsWaitingForRS.Count - 1; i >= 0; i--)
+                {
+                    Instruction nonIssuedInstruction = instructionsWaitingForRS[i];
+
+                    ReservationStation? availableRs = GetNextAvailableRS(nonIssuedInstruction);
+                    if (availableRs is not null)
+                    {
+                        instructionsWaitingForRS.Remove(nonIssuedInstruction);
+                        availableRs.IssueInstruction(nonIssuedInstruction, CurrentCycle, _issueDuration, _executionTimes![nonIssuedInstruction.Op], _writeBackDuration);
+                    }
                 }
-            }
+                //proceed the cycle until its corresponding RS is ready / else STALL
+            } while (instructionsWaitingForRS.Any());
 
-            //add new commands to reservation stations (OR STALL <- check this later)
-            foreach (var instruction in currentCycleInstructions)
+            if (!InstructionsQueue.Any()) continue;
+
+            //issue new commands (should DEQUEUE commands ONLY if the RS is available!)
+            List<Instruction> instructionsToBeIssued = GetInstructionsToBeIssued();
+
+            foreach (var instruction in instructionsToBeIssued)
             {
-                if (LoadCommands!.Contains(instruction.Op))
-                {
-                    //add to load-reservation station!
-                    //get first non-busy RS
-                    var nextRS = LoadReservationStations!.FirstOrDefault(rs => !rs.IsBusy);
-                    nextRS.AddInstruction(
-                        instruction, iCycle,
-                        _issueDuration, _executionTimes![instruction.Op], _writeBackDuration);
-                    Console.WriteLine($"  Adding command '{instruction.Command}' to {nextRS.Name}...");
+                //var next = instructionsQueue.Dequeue();
+                ReservationStation? availableRs = GetNextAvailableRS(instruction);
 
+                if (availableRs is null)
+                {
+                    instructionsWaitingForRS.Add(instruction);
                     continue;
                 }
 
-                {
-                    //else it is one of the calc names
-                    string rsName = CalcCommands.FirstOrDefault(entry => entry.Value.Contains(instruction.Op)).Key;
-                    if (rsName == "") throw new InvalidOperationException($"Operation: '{instruction.Operand1}' is not registered.");
-                    //get the first calc reservation station!
-
-                    var nextRS = CalcReservationStations[rsName].FirstOrDefault(rs => !rs.IsBusy);
-                    nextRS.AddInstruction(instruction, iCycle, _issueDuration, _executionTimes[instruction.Op], _writeBackDuration);
-                    Console.WriteLine($"  Adding command '{instruction.Command}' to {nextRS.Name}...");
-
-                }
+                //an available rs has been found!
+                availableRs.IssueInstruction(instruction, CurrentCycle, _issueDuration, _executionTimes![instruction.Op], _writeBackDuration);
             }
 
-            Console.WriteLine("RESERVATION STATIONS:");
-            //if (iCycle == 7) Debugger.Break();
-
-            var allRSs = AllReservationStations;
-            foreach (var rs in allRSs)
-                Console.WriteLine($"  {rs}");
-
-            Console.WriteLine("REGISTERS:");
-            foreach (var entry in RegisterFile)
-                Console.WriteLine($"  {entry.Key}: {entry.Value}");
-
-
+            PrintRegistrationStationsAndRegistersStatus();
         }
 
         Console.WriteLine("\nSCHEDULE:");
         //at the end print the table!
-        foreach (var instruction in instructions!)
+        foreach (var instruction in InstructionsQueue!)
             Console.WriteLine(instruction);
     }
 
+    private List<Instruction> GetInstructionsToBeIssued()
+    {
+        int instructionsToIssue = Math.Min(InstructionsQueue.Count, _issuesPerCycle);
+        List<Instruction> instructionsToBeIssued = new();
+        for (int i = 0; i < instructionsToIssue; i++)
+            instructionsToBeIssued.Add(InstructionsQueue.Dequeue());
+        return instructionsToBeIssued;
+    }
 
+    private void PrintRegistrationStationsAndRegistersStatus()
+    {
+        Console.WriteLine("RESERVATION STATIONS:");
+        var allRSs = AllReservationStations;
+        foreach (var rs in allRSs) Console.WriteLine($"  {rs}");
+
+        Console.WriteLine("REGISTERS:");
+        foreach (var entry in RegisterFile) Console.WriteLine($"  {entry.Key}: {entry.Value}");
+    }
+
+    private ReservationStation? GetNextAvailableRS(Instruction? instruction)
+    {
+        ReservationStation? availableRs = null;
+        if (LoadCommands!.Contains(instruction.Op))
+            availableRs = LoadReservationStations!.FirstOrDefault(rs => !rs.IsBusy);
+        else //it is a calc command
+        {
+            string rsName = CalcCommandReservationStations[instruction.Op];
+            availableRs = CalcReservationStations[rsName].FirstOrDefault(rs => !rs.IsBusy);
+        }
+
+        return availableRs;
+    }
+
+    private void ProceedCycleAndUpdateRS()
+    {
+        CurrentCycle++;
+
+        Console.WriteLine($"\nCYCLE: {CurrentCycle}");
+        Console.WriteLine("EVENTS:");
+
+        //for each reservation station update the status and time
+        //this should run prior to issuing new instructions
+        var runningRSs = AllReservationStations.Where(rs => rs.IsBusy).ToList();
+        foreach (var rs in runningRSs)
+            rs.GotoNextCycle();
+    }
+
+
+    public void WriteToCDB(ReservationStation whoWrites, int currentTime) //This is common for both the CalcRS and LoadRS
+    {
+        string result = GetNextValue();
+
+        Console.WriteLine($"  Writing value to CDB: {whoWrites.Name}->{result}");
+
+        foreach (var otherRs in AllCalcReservationStations.Where(rs => rs.Qk == whoWrites))
+        {
+            otherRs.Vk = result;  //Instruction!.Operand1; //should be the result sth like R[R1]
+            otherRs.Qk = null;
+
+            if (otherRs.Qj is null)
+                otherRs.StartExecutionTime = currentTime + 1;
+        }
+
+        foreach (var otherRs in AllCalcReservationStations.Where(rs => rs.Qj == whoWrites))
+        {
+            otherRs.Vj = result; //Instruction!.Operand1;
+            otherRs.Qj = null;
+
+            if (otherRs.Qk is null)
+                otherRs.StartExecutionTime = currentTime + 1;
+        }
+
+        foreach (var entry in RegisterFile)
+        {
+            if (entry.Value == whoWrites.Name)  //check if there is a value of the rs
+                RegisterFile[entry.Key] = result;
+        }
+    }
 }
