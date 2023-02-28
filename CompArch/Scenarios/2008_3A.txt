@@ -1,6 +1,11 @@
+#main
+issuesPerCycle = 1
+commitsPerCycle = 1
+
+
 #functional units
 #<name>,<count>
-Adder,2
+Adder,1
 
 #reservation stations
 #('Load' must be always included)

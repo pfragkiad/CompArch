@@ -104,6 +104,14 @@ MUL R5,R4,R8
          */
 
         var settings = _reader.ReadFile(scenarioFile);
+        int issuesPerCycle = 1;
+        int commitsPerCycle = 1;
+        if(settings.ContainsKey("main"))
+        {
+            var dictionary = _reader.BlockToDictionary(settings["main"]);
+            issuesPerCycle = int.Parse(dictionary["issuesPerCycle"]);
+            commitsPerCycle = int.Parse(dictionary["commitsPerCycle"]);
+        }
 
         Dictionary<string, int> functionalUnitsCount = new Dictionary<string, int>();
         if (settings.ContainsKey("functional units"))
@@ -236,7 +244,9 @@ MUL R5,R4,R8
 
 
         //we should verify that instructions are include the required register
-        _tomasulo.SetCode(code, registers, executionTimes, _options);
+        _tomasulo.SetCode(code, registers, executionTimes,
+            issuesPerCycle:issuesPerCycle,
+            commitsPerCycle:commitsPerCycle);
 
         _tomasulo.Run();
     }

@@ -1,3 +1,7 @@
+#main
+issuesPerCycle = 2
+commitsPerCycle = 2
+
 #functional units
 #<name>,<count>
 Integer,2

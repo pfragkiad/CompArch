@@ -1,6 +1,7 @@
-﻿//TODO: Load with dependencies.
-//CDB priority
-//TODO: ROB
+﻿//TODO: Put full settings to file.
+//TODO: Load with dependencies.
+//TODO: CDB priority with maximum concurrent WBs (writeBacksPerCycle too)
+//TODO: ROB/Commit
 
 
 var app = App.GetApp();
@@ -14,5 +15,5 @@ var app = App.GetApp();
 var scenarios = app.Services.GetTomasuloScenarios();
 
 //scenarios.RunManualScenario();
-//scenarios.RunScenario("../../../Scenarios/2008_3A.txt");
-scenarios.RunScenario("../../../Scenarios/2008_3B.txt");
+scenarios.RunScenario("../../../Scenarios/2008_3A.txt");
+//scenarios.RunScenario("../../../Scenarios/2008_3B.txt");

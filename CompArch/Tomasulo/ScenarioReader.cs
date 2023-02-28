@@ -93,4 +93,20 @@ Adder,1
 
         return (name, lines);
     }
+
+
+    public Dictionary<string,string> BlockToDictionary(List<string> lines)
+    {
+        Dictionary<string, string> d = new Dictionary<string, string>();
+
+        //issues=1
+        foreach (string line in lines)
+        {
+            string[] tokens =  line.Split('=').Select(t=>t.Trim()).ToArray();
+            d.Add(tokens[0], tokens[1]);    
+        }
+
+        return d;
+    }
+
 }

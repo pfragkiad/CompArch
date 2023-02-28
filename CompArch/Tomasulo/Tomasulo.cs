@@ -103,14 +103,18 @@ public class Tomasulo
 
     #region Setup commands and execution times
 
-    int _writeBackDuration = 1;
-    public int WriteBackDuration { get => _writeBackDuration; }
+    //int _writeBackDuration = 1;
+    //public int WriteBackDuration { get => _writeBackDuration; }
+
     //superscalar settings
     int _issuesPerCycle = 1;
     public int IssuesPerCycle { get => _issuesPerCycle; }
 
     int _issueDuration = 1;
     public int IssueDuration { get => _issueDuration; }
+
+    int _commitsPerCycle = 1;
+    public int CommitsPerCycle { get => _commitsPerCycle; }
 
 
     List<Instruction>? instructions;
@@ -123,11 +127,11 @@ public class Tomasulo
     Dictionary<string, int>? _executionTimes;
     public Dictionary<string, int>? ExecutionTimes { get => _executionTimes; set => _executionTimes = value; }
 
-    public void SetCode(string code,
-        List<string> registers,
-        Dictionary<string, int> executionTimes,
-        TomasuloOptions options) =>
-        SetCode(code, registers, executionTimes, options.IssuesPerCycle, options.IssueDuration, options.WriteBackDuration);
+    //public void SetCode(string code,
+    //    List<string> registers,
+    //    Dictionary<string, int> executionTimes,
+    //    TomasuloOptions options) =>
+    //    SetCode(code, registers, executionTimes, options.IssuesPerCycle, options.IssueDuration, options.WriteBackDuration);
 
     public void SetCode(
         string code,
@@ -135,7 +139,7 @@ public class Tomasulo
         Dictionary<string, int> executionTimes,
         int issuesPerCycle = 1,
         int issueDuration = 1,
-        int writeBackDuration = 1)
+        int commitsPerCycle = 1)
     {
         this.instructions = code.Trim().Split("\r\n").Select(l => new Instruction(l)).ToList();
 
@@ -156,7 +160,8 @@ public class Tomasulo
 
         _issuesPerCycle = issuesPerCycle;
         _issueDuration = issueDuration;
-        _writeBackDuration = writeBackDuration;
+        _commitsPerCycle = commitsPerCycle;
+       // _writeBackDuration = writeBackDuration;
 
 
 
