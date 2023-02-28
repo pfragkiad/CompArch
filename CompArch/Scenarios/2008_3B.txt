@@ -1,0 +1,31 @@
+#functional units
+#<name>,<count>
+Integer,2
+FP_FU,2
+
+#reservation stations
+#('Load' must be always included)
+#<name>,<count>[,<functional unit>]
+Load,4,Integer
+FP,10,FP_FU
+
+#commands 
+#<command>,<duration>,<reservation station>
+LD,1,Load
+ADD.D,5,FP
+MUL.D,10,FP
+DIV.D,14,FP
+
+#registers
+R1-R3,F0-F10
+
+#code
+LD F0,0(R1)
+MUL.D F2,F1,F0
+DIV.D F6,F2,F0
+ADD.D F2,F4,F8
+LD F5,0(R3)
+LD F10,0(R2)
+DIV.D F6,F1,F4
+MUL.D F4,F0,F5
+ADD.D F2,F7,F8

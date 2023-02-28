@@ -105,7 +105,7 @@ public abstract class ReservationStation
         //still issuing the command
         if (CurrentTime <= LastIssueTime) return;
 
-        //wait for dependencies
+        //wait for dependencies or FU
         if (Status == ReservationStationStatus.IssueStarted)
             Status = ShouldWaitForDependencies ? ReservationStationStatus.WaitForDependencies : ReservationStationStatus.WaitForFunctionalUnit;
 
@@ -116,7 +116,7 @@ public abstract class ReservationStation
         if (CurrentTime == WriteBackTime)
         {
             Status = ReservationStationStatus.WriteBackStarted;
-            Console.WriteLine($"  {Name} starts write back. {Name} is released.");
+            Console.WriteLine($"  {Name} writes to CDB. {Name} is released.");
 
             //RELEASE RS so that other instructions!
             Reset();
@@ -127,10 +127,32 @@ public abstract class ReservationStation
         }
     }
 
+    public void ForceAssignFU()
+    {
+        int availableFUs = Parent.AvailableFunctionalUnits[AssignedFunctionalUnitsName!];
+
+        //there is an available FU, so reserve it
+        Console.WriteLine($"  {Name} reserves FU. FUs({AssignedFunctionalUnitsName}): {availableFUs}->{availableFUs - 1}");
+        Parent.AvailableFunctionalUnits[AssignedFunctionalUnitsName]--;
+
+        //start execution NOW!
+        Status = ReservationStationStatus.ExecutionStarted;
+        Console.WriteLine($"  {Name} starts execution.");
+        StartExecutionTime = CurrentTime;
+    }
+
     //Returns true on status update, else false.
     public bool CheckForFunctionUnitAndStartExecution()
     {
-        if (Status == ReservationStationStatus.WaitForDependencies && !ShouldWaitForDependencies
+
+        if (Status == ReservationStationStatus.WaitForDependencies && !ShouldWaitForDependencies && Parent.LastWBTime == CurrentTime)
+        {
+            //we should not start execution immediately, we should wait at least one cycle
+            Status = ReservationStationStatus.WaitForFunctionalUnit;
+            return true;
+        }
+
+        if (Status == ReservationStationStatus.WaitForDependencies && !ShouldWaitForDependencies //and CurrentTime>Parent > LastWBTime
             || Status == ReservationStationStatus.WaitForFunctionalUnit)
         {
             //check for available function unit if there is one for the reservation station category

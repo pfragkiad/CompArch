@@ -1,6 +1,6 @@
 #functional units
 #<name>,<count>
-Adder,1
+Adder,2
 
 #reservation stations
 #('Load' must be always included)

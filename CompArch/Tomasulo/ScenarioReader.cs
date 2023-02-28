@@ -84,7 +84,7 @@ Adder,1
         List<string> lines = new();
         while (!string.IsNullOrEmpty(line))
         {
-            lines.Add(line);
+            if(!line.StartsWith("#")) lines.Add(line);
             if (reader.EndOfStream) break;
 
             line = reader.ReadLine()?.Trim() ?? "";

@@ -71,7 +71,7 @@ public class CalcReservationStation : ReservationStation
             return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT FOR DEPENDENCIES, Vj: {Vj ?? "-"}, Vk: {Vk ?? "-"}, Qj: {Qj?.Name ?? "-"}, Qk: {Qk?.Name ?? "-"}";
 
         if (Status==ReservationStationStatus.WaitForFunctionalUnit)
-            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT FOR DEPENDENCIES, Vj: {Vj}, Vk: {Vk}, Qj: -, Qk: -";
+            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT FOR FU, Vj: {Vj}, Vk: {Vk}, Qj: -, Qk: -";
       
         if (Status ==ReservationStationStatus.ExecutionStarted)
             return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: EXECUTE, Vj: {Vj}, Vk: {Vk}, Remaining Time: {LastExecutionTime - CurrentTime}";

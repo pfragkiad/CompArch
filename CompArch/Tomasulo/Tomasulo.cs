@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Reflection.Metadata;
@@ -171,7 +172,7 @@ public class Tomasulo
 
     public void Run()
     {
-        if(this.instructions is null || instructions.Count==0)
+        if (this.instructions is null || instructions.Count == 0)
         {
             Console.WriteLine("No instructions to process.");
             return;
@@ -250,11 +251,13 @@ public class Tomasulo
     private void PrintRegistrationStationsAndRegistersStatus()
     {
         Console.WriteLine("RESERVATION STATIONS:");
-        var allRSs = AllReservationStations;
-        foreach (var rs in allRSs) Console.WriteLine($"  {rs}");
+        var allRSs = AllReservationStations.Where(rs => rs.IsBusy);
+        foreach (var rs in allRSs)
+            Console.WriteLine($"  {rs}");
 
         Console.WriteLine("REGISTERS:");
-        foreach (var entry in RegisterFile) Console.WriteLine($"  {entry.Key}: {entry.Value}");
+        foreach (var entry in RegisterFile.Where(r => r.Value != "-"))
+            Console.WriteLine($"  {entry.Key}: {entry.Value}");
     }
 
     private ReservationStation? GetNextAvailableRS(Instruction? instruction)
@@ -282,8 +285,38 @@ public class Tomasulo
         //this should run prior to issuing new instructions
         var runningRSs = AllReservationStations.Where(rs => rs.IsBusy).ToList();
         foreach (var rs in runningRSs)
+        {
             rs.GotoNextCycle();
+
+            string? usedFU = rs.AssignedFunctionalUnitsName;
+            //this will happen only if the RS writes back on the current cycle
+            //solve the conflict here!
+            if (!rs.IsBusy 
+                && !string.IsNullOrWhiteSpace(usedFU) && 
+                AvailableFunctionalUnits[usedFU] ==1)
+            {
+                //get all the RS that wait for the same FU and assign the FU to the earliest one
+                var rsWithSameFu = runningRSs
+                    .Where(rs2 => rs2.AssignedFunctionalUnitsName == usedFU && rs2.Status == ReservationStationStatus.WaitForFunctionalUnit)
+                    .OrderBy(rs2 => rs2.Instruction!.Issue).ToList();
+
+                if (rsWithSameFu.Any())
+                {
+
+                    if(rsWithSameFu.Count > 1)
+                    {
+                        string rsWithSameFuString = string.Join(", ", rsWithSameFu.Select(rs3 => rs3.Name));
+                        Console.WriteLine($"  Assigning FU {usedFU} to the oldest of {rsWithSameFuString} => {rsWithSameFu[0].Name}");
+                    }
+
+                    rsWithSameFu[0].ForceAssignFU();
+
+                }
+            }
+        }
     }
+
+    public int LastWBTime { get; private set; }
 
 
     public void WriteToCDB(ReservationStation whoWrites) //This is common for both the CalcRS and LoadRS
@@ -296,19 +329,12 @@ public class Tomasulo
         {
             affectedRs.Vk = result;  //Instruction!.Operand1; //should be the result sth like R[R1]
             affectedRs.Qk = null;
-
-            //if (affectedRs.Qj is null)
-            //    affectedRs.CheckForFunctionUnitAndStartExecution();
         }
 
-        foreach (var otherRs in AllCalcReservationStations.Where(rs => rs.Qj == whoWrites))
+        foreach (var affectedRs in AllCalcReservationStations.Where(rs => rs.Qj == whoWrites))
         {
-            otherRs.Vj = result; //Instruction!.Operand1;
-            otherRs.Qj = null;
-
-            //if (otherRs.Qk is null)
-            //    otherRs.CheckForFunctionUnitAndStartExecution();
-                //otherRs.StartExecutionTime = currentTime + 1;
+            affectedRs.Vj = result; //Instruction!.Operand1;
+            affectedRs.Qj = null;
         }
 
         foreach (var entry in RegisterFile)
@@ -316,5 +342,7 @@ public class Tomasulo
             if (entry.Value == whoWrites.Name)  //check if there is a value of the rs
                 RegisterFile[entry.Key] = result;
         }
+
+        LastWBTime = CurrentCycle;
     }
 }
