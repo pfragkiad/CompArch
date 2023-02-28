@@ -15,5 +15,5 @@ var app = App.GetApp();
 
 var scenarios = app.Services.GetTomasuloScenarios();
 
-scenarios.RunManualScenario();
-//scenarios.RunScenario("../../../Scenarios/2008_3A.txt");
+//scenarios.RunManualScenario();
+scenarios.RunScenario("../../../Scenarios/2008_3A.txt");

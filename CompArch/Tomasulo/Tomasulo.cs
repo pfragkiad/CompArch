@@ -202,30 +202,31 @@ public class Tomasulo
                     if (availableRs is not null)
                     {
                         instructionsWaitingForRS.Remove(nonIssuedInstruction);
-                        availableRs.IssueInstruction(nonIssuedInstruction, CurrentCycle, _issueDuration, _executionTimes![nonIssuedInstruction.Op], _writeBackDuration);
+                        availableRs.IssueInstruction(nonIssuedInstruction, CurrentCycle, _issueDuration, _executionTimes![nonIssuedInstruction.Op]);
                     }
                 }
                 //proceed the cycle until its corresponding RS is ready / else STALL
             } while (instructionsWaitingForRS.Any());
 
-            if (!InstructionsQueue.Any()) continue;
-
-            //issue new commands (should DEQUEUE commands ONLY if the RS is available!)
-            List<Instruction> instructionsToBeIssued = GetInstructionsToBeIssued();
-
-            foreach (var instruction in instructionsToBeIssued)
+            if (InstructionsQueue.Any())
             {
-                //var next = instructionsQueue.Dequeue();
-                ReservationStation? availableRs = GetNextAvailableRS(instruction);
+                //issue new commands (should DEQUEUE commands ONLY if the RS is available!)
+                List<Instruction> instructionsToBeIssued = GetInstructionsToBeIssued();
 
-                if (availableRs is null)
+                foreach (var instruction in instructionsToBeIssued)
                 {
-                    instructionsWaitingForRS.Add(instruction);
-                    continue;
-                }
+                    //var next = instructionsQueue.Dequeue();
+                    ReservationStation? availableRs = GetNextAvailableRS(instruction);
 
-                //an available rs has been found!
-                availableRs.IssueInstruction(instruction, CurrentCycle, _issueDuration, _executionTimes![instruction.Op], _writeBackDuration);
+                    if (availableRs is null)
+                    {
+                        instructionsWaitingForRS.Add(instruction);
+                        continue;
+                    }
+
+                    //an available rs has been found!
+                    availableRs.IssueInstruction(instruction, CurrentCycle, _issueDuration, _executionTimes![instruction.Op]);
+                }
             }
 
             PrintRegistrationStationsAndRegistersStatus();
@@ -233,7 +234,7 @@ public class Tomasulo
 
         Console.WriteLine("\nSCHEDULE:");
         //at the end print the table!
-        foreach (var instruction in InstructionsQueue!)
+        foreach (var instruction in Instructions!)
             Console.WriteLine(instruction);
     }
 
@@ -285,19 +286,19 @@ public class Tomasulo
     }
 
 
-    public void WriteToCDB(ReservationStation whoWrites, int currentTime) //This is common for both the CalcRS and LoadRS
+    public void WriteToCDB(ReservationStation whoWrites) //This is common for both the CalcRS and LoadRS
     {
         string result = GetNextValue();
 
         Console.WriteLine($"  Writing value to CDB: {whoWrites.Name}->{result}");
 
-        foreach (var otherRs in AllCalcReservationStations.Where(rs => rs.Qk == whoWrites))
+        foreach (var affectedRs in AllCalcReservationStations.Where(rs => rs.Qk == whoWrites))
         {
-            otherRs.Vk = result;  //Instruction!.Operand1; //should be the result sth like R[R1]
-            otherRs.Qk = null;
+            affectedRs.Vk = result;  //Instruction!.Operand1; //should be the result sth like R[R1]
+            affectedRs.Qk = null;
 
-            if (otherRs.Qj is null)
-                otherRs.StartExecutionTime = currentTime + 1;
+            //if (affectedRs.Qj is null)
+            //    affectedRs.CheckForFunctionUnitAndStartExecution();
         }
 
         foreach (var otherRs in AllCalcReservationStations.Where(rs => rs.Qj == whoWrites))
@@ -305,8 +306,9 @@ public class Tomasulo
             otherRs.Vj = result; //Instruction!.Operand1;
             otherRs.Qj = null;
 
-            if (otherRs.Qk is null)
-                otherRs.StartExecutionTime = currentTime + 1;
+            //if (otherRs.Qk is null)
+            //    otherRs.CheckForFunctionUnitAndStartExecution();
+                //otherRs.StartExecutionTime = currentTime + 1;
         }
 
         foreach (var entry in RegisterFile)

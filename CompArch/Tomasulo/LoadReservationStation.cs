@@ -21,9 +21,9 @@ public class LoadReservationStation : ReservationStation
     public string Address => $"M[{Offset}+{SourceRegister}]";
 
 
-    public override void IssueInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration, int writebackDuration)
+    public override void IssueInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration)
     {
-        base.IssueInstruction(instruction, issueTime, issueDuration, executionDuration, writebackDuration);
+        base.IssueInstruction(instruction, issueTime, issueDuration, executionDuration);
 
         //LD R1, 0(R2)
         var m = Regex.Match(instruction.Operand2!,
@@ -34,45 +34,32 @@ public class LoadReservationStation : ReservationStation
 
         //the following are set only if the RS is ready!
         //IsReady = true;
-        StartExecutionTime = issueTime + issueDuration;
+        //StartExecutionTime = issueTime + issueDuration;
 
         //update the register file!
         Parent.RegisterFile[TargetRegister] = Name;
 
     }
 
-    public override void GotoNextCycle()
-    {
-        base.GotoNextCycle();
-
-        if (CurrentTime == LastWriteBackTime
-                && Status == ReservationStationStatus.WriteBackStarted) //WRITE BACK (broadcast value to CDB)
-        {
-            //write to cdb at the end of the WB 
-            Parent.WriteToCDB(this,CurrentTime);
-
-
-            Reset();
-        }
-
-    }
+    //THIS SHOULD CHANGE
+    public override bool ShouldWaitForDependencies => false;
 
     public override string ToString()
     {
         if (!IsBusy) return $"{Name}, Busy: No";
 
-        if (CurrentTime < StartExecutionTime)
-            return $"{Name}, Busy: Yes, Address: {Address}, State: ISSUE, Remaining Time: {StartExecutionTime - CurrentTime - 1}";
+        if (Status==ReservationStationStatus.IssueStarted)
+            return $"{Name}, Busy: Yes, Address: {Address}, State: ISSUE, Remaining Time: {LastIssueTime - CurrentTime}";
 
-        if (CurrentTime <= LastExecutionTime && CurrentTime >= StartExecutionTime)
+        if (Status==ReservationStationStatus.ExecutionStarted)
             return $"{Name}, Busy: Yes, Address: {Address}, State: EXECUTE, Remaining Time: {LastExecutionTime - CurrentTime}";
 
-        if (CurrentTime <= LastWriteBackTime) //cannot be equal!
-            return $"{Name}, Busy: Yes, Address: {Address}, State: WRITEBACK, Remaining Time: {LastWriteBackTime - CurrentTime}";
+        if (Status==ReservationStationStatus.WriteBackStarted) //cannot be equal!
+            return $"{Name}, Busy: Yes, Address: {Address}, State: WRITEBACK, Remaining Time: {WriteBackTime - CurrentTime}";
 
 
         //we assume the RS is not busy in any other case
-        return $"{Name}, Busy: No";
+        return $"{Name}, Status: Unknown";
 
     }
 }

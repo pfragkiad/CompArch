@@ -88,18 +88,26 @@ public class Instruction
 
     public override string ToString()
     {
+        string? issue = Issue != IssueEnd ? $"{Issue}-{IssueEnd}" : Issue.ToString();
+        string? execute = WriteBack is not null ? $"{Execute}-{WriteBack - 1}" : Execute.ToString();
+
+        //if (Commit is not null)
+        //    return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}-{WriteBack - 1}, WB: {WriteBack}-{WriteBackEnd}, CO: {Commit}";
+        //if (WriteBack is not null)
+        //    return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}-{WriteBack - 1}, WB: {WriteBack}-{WriteBackEnd}";
         if (Commit is not null)
-            return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}-{WriteBack - 1}, WB: {WriteBack}-{WriteBackEnd}, CO: {Commit}";
+            return $"{Command} | IS: {issue}, EX: {execute}, WB: {WriteBack}, CO: {Commit}";
         if (WriteBack is not null)
-            return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}-{WriteBack - 1}, WB: {WriteBack}-{WriteBackEnd}";
+            return $"{Command} | IS: {issue}, EX: {execute}, WB: {WriteBack}";
+
         if (Execute is not null)
-            return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}";
+            return $"{Command} | IS: {issue}, EX: {Execute}";
         if (Issue is not null)
-            return $"{Command} | IS: {Issue}-{IssueEnd}";
+            return $"{Command} | IS: {issue}";
         return Command;
     }
 
-    public int? Issue, IssueEnd, Execute, WriteBack, WriteBackEnd, Commit;
+    public int? Issue, IssueEnd, Execute, WriteBack, Commit; //, WriteBackEnd
 
 }
 

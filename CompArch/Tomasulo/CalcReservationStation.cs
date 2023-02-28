@@ -19,8 +19,6 @@ public class CalcReservationStation : ReservationStation
 
     public override string CategoryName => _calculationName;
 
-    public string? AssignedFunctionalUnitsName { get; set; }
-
 
     public string? Vj { get; set; }
 
@@ -31,9 +29,9 @@ public class CalcReservationStation : ReservationStation
 
     public string? TargetRegister { get; private set; }
 
-    public override void IssueInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration, int writebackDuration)
+    public override void IssueInstruction(Instruction instruction, int issueTime, int issueDuration, int executionDuration)
     {
-        base.IssueInstruction(instruction, issueTime, issueDuration, executionDuration, writebackDuration);
+        base.IssueInstruction(instruction, issueTime, issueDuration, executionDuration);
         //this must not be null
         TargetRegister = instruction.Operand1!;
 
@@ -58,66 +56,30 @@ public class CalcReservationStation : ReservationStation
 
         //update the register file! (RAT)
         Parent.RegisterFile[TargetRegister] = Name;
-
-
-        //if (Vj is not null & Vk is not null)
-        //{
-            
-        //    int FUs = Parent.AvailableFunctionalUnits[CategoryName];
-        //    if (FUs > 0)
-        //    {
-        //        Console.WriteLine($"  {Name} reserves FU. FUs({CategoryName}): {FUs}->{FUs - 1}");
-        //        Parent.AvailableFunctionalUnits[CategoryName]--;
-        //        StartExecutionTime = issueTime + issueDuration;
-        //    }
-        //}
-
     }
 
-    public override void GotoNextCycle() //same with Load RS
-    {
-        base.GotoNextCycle();
-
-        if (CurrentTime == LastExecutionTime)
-        {
-            int FUs = Parent.AvailableFunctionalUnits[CategoryName];
-            Console.WriteLine($"  {Name} releases FU. FUs({CategoryName}): {FUs}->{FUs + 1}");
-            Parent.AvailableFunctionalUnits[CategoryName]++;
-        }
-
-        if (CurrentTime == LastWriteBackTime
-                && Status == ReservationStationStatus.WriteBackStarted) //WRITE BACK (broadcast value to CDB)
-        {
-            //write to cdb at the end of the WB 
-            Parent.WriteToCDB(this, CurrentTime);
-
-            Reset();
-        }
-
-    }
-
+    public override bool ShouldWaitForDependencies => Qk is not null || Qj is not null;
 
     public override string ToString()
     {
         if (!IsBusy) return $"{Name}, Busy: No";
 
-        if (CurrentTime <= LastIssueTime)
-            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: ISSUE, Remaining Time: {LastIssueTime - CurrentTime}";
+        if (Status==ReservationStationStatus.IssueStarted)
+            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: ISSUE, Vj: {Vj ?? "-"}, Vk: {Vk ?? "-"}, Qj: {Qj?.Name ?? "-"}, Qk: {Qk?.Name ?? "-"}, Remaining Time: {LastIssueTime - CurrentTime}";
 
-        if (!IsReady)
-            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT, Vj: {Vj ?? "-"}, Vk: {Vk ?? "-"}, Qj: {Qj?.Name ?? "-"}, Qk: {Qk?.Name ?? "-"}";
+        if (Status==ReservationStationStatus.WaitForDependencies)
+            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT FOR DEPENDENCIES, Vj: {Vj ?? "-"}, Vk: {Vk ?? "-"}, Qj: {Qj?.Name ?? "-"}, Qk: {Qk?.Name ?? "-"}";
 
-        if (CurrentTime <= LastExecutionTime && CurrentTime >= StartExecutionTime)
+        if (Status==ReservationStationStatus.WaitForFunctionalUnit)
+            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WAIT FOR DEPENDENCIES, Vj: {Vj}, Vk: {Vk}, Qj: -, Qk: -";
+      
+        if (Status ==ReservationStationStatus.ExecutionStarted)
             return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: EXECUTE, Vj: {Vj}, Vk: {Vk}, Remaining Time: {LastExecutionTime - CurrentTime}";
 
-        if (CurrentTime <= LastWriteBackTime) //if(CurrentTime<LastExecutionTime)
-            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WRITEBACK, Vj: {Vj}, Vk: {Vk}, Remaining Time: {LastWriteBackTime - CurrentTime}";
+        if (Status==ReservationStationStatus.WriteBackStarted) //if(CurrentTime<LastExecutionTime)
+            return $"{Name}, Busy: Yes, Op: {Instruction!.Op}, State: WRITEBACK, Vj: {Vj}, Vk: {Vk}, Remaining Time: {WriteBackTime - CurrentTime}";
 
-        throw new InvalidOperationException();
-        //we assume the RS is not busy in any other case
-        //return $"{Name}, Busy: No";
+        return $"{Name}, Status: Unknown";
     }
-
-
 
 }
