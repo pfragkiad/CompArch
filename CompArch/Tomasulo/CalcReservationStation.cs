@@ -43,7 +43,10 @@ public class CalcReservationStation : ReservationStation
         if (loadQjFound is null)
             loadQjFound = Parent.AllCalcReservationStations.FirstOrDefault(rs => rs.IsBusy && rs.TargetRegister == instruction.Operand2);
         if (loadQjFound is not null)
+        {
             Qj = loadQjFound;
+            Instruction.Comment += $"Depends on {Qj.Name} ({Parent.Instructions.IndexOf(Qj.Instruction)+1})";
+        }
         else Vj = instruction.Operand2;
 
         //search for the last write operation of the k operand
@@ -51,7 +54,10 @@ public class CalcReservationStation : ReservationStation
         if (loadQkFound is null)
             loadQkFound = Parent.AllCalcReservationStations.FirstOrDefault(rs => rs.IsBusy && rs.TargetRegister == instruction.Operand3);
         if (loadQkFound is not null)
+        {
             Qk = loadQkFound;
+            Instruction.Comment += $"Depends on {Qk.Name} ({Parent.Instructions.IndexOf(Qk.Instruction) + 1})";
+        }
         else Vk = instruction.Operand3;
 
         //update the register file! (RAT)

@@ -3,17 +3,23 @@
 //TODO: CDB priority with maximum concurrent WBs (writeBacksPerCycle too)
 //TODO: ROB capacity
 
-
 var app = App.GetApp();
 
 //var branchPredictor = app.Services.GetBranchPredictor();
 //branchPredictor.Predict(BranchPredictionScenario.S2008_2Ai);
 
-//var test = app.Services.GetRequiredService<IConfiguration>();
-//Console.WriteLine(test["Test"]);
+//var configuration = app.Services.GetRequiredService<IConfiguration>();
+//Console.WriteLine(configuration["Test"]);
 
-var scenarios = app.Services.GetTomasuloScenarios();
+//ScenarioPaths options2 = new ScenarioPaths();
+//configuration.GetSection("ScenarioPaths").Bind(options2);
+// or 
+//var settings = app.Services.GetRequiredService<IOptions<ScenarioPaths>>().Value;
 
-//scenarios.RunManualScenario();
-scenarios.RunScenario("../../../Scenarios/2008_3A.txt");
-//scenarios.RunScenario("../../../Scenarios/2008_3B.txt");
+var loader = app.Services.GetTomasuloScenarioLoader();
+var paths = app.Services.GetTomasuloScenarioPaths();
+
+if(!string.IsNullOrWhiteSpace(paths.SelectedPath))
+    loader.RunScenario(paths.SelectedPath);
+else
+    loader.RunManualScenario();

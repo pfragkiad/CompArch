@@ -238,10 +238,16 @@ public class Tomasulo
             PrintRegistrationStationsAndRegistersStatus();
         }
 
+        PrintSchedule();
+    }
+
+    private void PrintSchedule()
+    {
         Console.WriteLine("\nSCHEDULE:");
         //at the end print the table!
-        foreach (var instruction in Instructions!)
-            Console.WriteLine(instruction);
+        int i = 0;
+        foreach (Instruction instruction in Instructions!)
+            Console.WriteLine($"{++i}. {instruction}");
     }
 
     private List<Instruction> GetInstructionsToBeIssued()

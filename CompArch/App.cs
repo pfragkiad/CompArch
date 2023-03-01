@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace CompArch;
@@ -15,9 +16,9 @@ public static class App
             .AddSingleton<BranchPredictor>()
             .AddSingleton<Tomasulo.Tomasulo>()
             .AddSingleton<ScenarioReader>()
-            .AddSingleton<Scenarios>()
+            .AddSingleton<ScenarioLoader>()
 
-            .Configure<TomasuloOptions>(context.Configuration.GetSection(TomasuloOptions.Header))
+            .Configure<ScenarioPaths>(context.Configuration.GetSection(ScenarioPaths.Header))
             ;
 
         }).UseSerilog((context, configuration) =>
@@ -36,7 +37,9 @@ public static class App
     public static BranchPredictor GetBranchPredictor(this IServiceProvider provider) =>
         provider.GetRequiredService<BranchPredictor>();
 
-    public static Scenarios GetTomasuloScenarios(this IServiceProvider provider) =>
-        provider.GetRequiredService<Scenarios>();
+    public static ScenarioLoader GetTomasuloScenarioLoader(this IServiceProvider provider) =>
+        provider.GetRequiredService<ScenarioLoader>();
 
+    public static ScenarioPaths GetTomasuloScenarioPaths(this IServiceProvider provider)=>
+        provider.GetRequiredService<IOptions<ScenarioPaths>>().Value;
 }

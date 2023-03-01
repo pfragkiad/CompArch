@@ -15,23 +15,20 @@ public enum TomasuloScenarios
     Basic,
 }
 
-public class Scenarios
+public class ScenarioLoader
 {
     private readonly Tomasulo _tomasulo;
     private readonly IConfiguration _configuration;
     private readonly ScenarioReader _reader;
-    private readonly TomasuloOptions _options;
 
-    public Scenarios(Tomasulo tomasulo,
+    public ScenarioLoader(Tomasulo tomasulo,
         IConfiguration configuration,
-        IOptions<TomasuloOptions> options,
         ScenarioReader reader)
     {
         _tomasulo = tomasulo;
 
         _configuration = configuration;
         this._reader = reader;
-        _options = options.Value;
     }
 
     public void RunManualScenario()

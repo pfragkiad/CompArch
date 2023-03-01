@@ -15,6 +15,8 @@ public class Instruction
     public string? Operand2;
     public string? Operand3;
 
+    public string? Comment;
+
     public Instruction(string operation, string? operand1, string? operand2 = null, string? operand3 = null)
     {
         Op = operation;
@@ -91,20 +93,31 @@ public class Instruction
         string? issue = Issue != IssueEnd ? $"{Issue}-{IssueEnd}" : Issue.ToString();
         string? execute = WriteBack is not null ? $"{Execute}-{WriteBack - 1}" : Execute.ToString();
 
+        StringBuilder sb = new StringBuilder(Command);
+
+        if (Issue is not null) sb.Append($" | IS: {issue}");
+        if (Execute is not null) sb.Append($", EX: {execute}");
+        if (WriteBack is not null) sb.Append($", WB: {WriteBack}");
+        if (Commit is not null) sb.Append($", CO: {Commit}");
+        if (Comment is not null) sb.Append($", {Comment}");
+
         //if (Commit is not null)
         //    return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}-{WriteBack - 1}, WB: {WriteBack}-{WriteBackEnd}, CO: {Commit}";
         //if (WriteBack is not null)
         //    return $"{Command} | IS: {Issue}-{IssueEnd}, EX: {Execute}-{WriteBack - 1}, WB: {WriteBack}-{WriteBackEnd}";
-        if (Commit is not null)
-            return $"{Command} | IS: {issue}, EX: {execute}, WB: {WriteBack}, CO: {Commit}";
-        if (WriteBack is not null)
-            return $"{Command} | IS: {issue}, EX: {execute}, WB: {WriteBack}";
 
-        if (Execute is not null)
-            return $"{Command} | IS: {issue}, EX: {Execute}";
-        if (Issue is not null)
-            return $"{Command} | IS: {issue}";
-        return Command;
+        //if (Commit is not null)
+        //    return $"{Command} | IS: {issue}, EX: {execute}, WB: {WriteBack}, CO: {Commit}";
+        //if (WriteBack is not null)
+        //    return $"{Command} | IS: {issue}, EX: {execute}, WB: {WriteBack}";
+
+        //if (Execute is not null)
+        //    return $"{Command} | IS: {issue}, EX: {Execute}";
+        //if (Issue is not null)
+        //    return $"{Command} | IS: {issue}";
+        //return Command;
+
+        return sb.ToString();
     }
 
     public int? Issue, IssueEnd, Execute, WriteBack, Commit; //, WriteBackEnd
