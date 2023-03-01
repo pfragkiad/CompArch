@@ -1,6 +1,6 @@
 #main
 issuesPerCycle = 1
-commitsPerCycle = 1
+commitsPerCycle = 2
 
 
 #functional units

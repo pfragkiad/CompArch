@@ -106,7 +106,7 @@ MUL R5,R4,R8
         var settings = _reader.ReadFile(scenarioFile);
         int issuesPerCycle = 1;
         int commitsPerCycle = 1;
-        if(settings.ContainsKey("main"))
+        if (settings.ContainsKey("main"))
         {
             var dictionary = _reader.BlockToDictionary(settings["main"]);
             issuesPerCycle = int.Parse(dictionary["issuesPerCycle"]);
@@ -125,7 +125,6 @@ MUL R5,R4,R8
                 string[] tokens = GetTokens(line);
                 functionalUnitsCount.Add(tokens[0], int.Parse(tokens[1]));
             }
-
 
         Dictionary<string, int> reservationStationsCount = new Dictionary<string, int>();
         Dictionary<string, string> reservationStationsFunctionalUnits = new Dictionary<string, string>();
@@ -219,8 +218,8 @@ MUL R5,R4,R8
         //add functionsl units
         if (functionalUnitsCount.Count > 0)
         {
-            foreach(var entry in functionalUnitsCount)
-                _tomasulo.AddFunctionalUnits(entry.Key,entry.Value);
+            foreach (var entry in functionalUnitsCount)
+                _tomasulo.AddFunctionalUnits(entry.Key, entry.Value);
         }
 
         //add reservation stations
@@ -245,8 +244,8 @@ MUL R5,R4,R8
 
         //we should verify that instructions are include the required register
         _tomasulo.SetCode(code, registers, executionTimes,
-            issuesPerCycle:issuesPerCycle,
-            commitsPerCycle:commitsPerCycle);
+            issuesPerCycle: issuesPerCycle,
+            commitsPerCycle: commitsPerCycle);
 
         _tomasulo.Run();
     }

@@ -161,7 +161,7 @@ public class Tomasulo
         _issuesPerCycle = issuesPerCycle;
         _issueDuration = issueDuration;
         _commitsPerCycle = commitsPerCycle;
-       // _writeBackDuration = writeBackDuration;
+        // _writeBackDuration = writeBackDuration;
 
 
 
@@ -193,7 +193,7 @@ public class Tomasulo
 
         List<Instruction> instructionsWaitingForRS = new List<Instruction>();
 
-        while (InstructionsQueue.Any() || AllReservationStations.Any(s => s.IsBusy))
+        while (InstructionsQueue.Any() || AllReservationStations.Any(s => s.IsBusy) || Instructions.Any(i=>i.Commit is null))
         {
             //if there is a non-issed instruction then STALL until its corresponding RS is ready
             do
@@ -281,6 +281,9 @@ public class Tomasulo
 
     private void ProceedCycleAndUpdateRS()
     {
+        if ((instructions?.Count ?? 0) == 0)
+            throw new InvalidOperationException("There are no instructions in the code.");
+
         CurrentCycle++;
 
         Console.WriteLine($"\nCYCLE: {CurrentCycle}");
@@ -293,12 +296,13 @@ public class Tomasulo
         {
             rs.GotoNextCycle();
 
+            //SOLVE FUNCTIONAL UNITS SELECTION HERE (shouldn't it be addressed in the GotoNextCycle?)
             string? usedFU = rs.AssignedFunctionalUnitsName;
             //this will happen only if the RS writes back on the current cycle
             //solve the conflict here!
-            if (!rs.IsBusy 
-                && !string.IsNullOrWhiteSpace(usedFU) && 
-                AvailableFunctionalUnits[usedFU] ==1)
+            if (!rs.IsBusy
+                && !string.IsNullOrWhiteSpace(usedFU) &&
+                AvailableFunctionalUnits[usedFU] == 1)
             {
                 //get all the RS that wait for the same FU and assign the FU to the earliest one
                 var rsWithSameFu = runningRSs
@@ -308,7 +312,7 @@ public class Tomasulo
                 if (rsWithSameFu.Any())
                 {
 
-                    if(rsWithSameFu.Count > 1)
+                    if (rsWithSameFu.Count > 1)
                     {
                         string rsWithSameFuString = string.Join(", ", rsWithSameFu.Select(rs3 => rs3.Name));
                         Console.WriteLine($"  Assigning FU {usedFU} to the oldest of {rsWithSameFuString} => {rsWithSameFu[0].Name}");
@@ -318,6 +322,33 @@ public class Tomasulo
 
                 }
             }
+        }
+
+        CheckForCommits();
+    }
+
+    private void CheckForCommits()
+    {
+        //the commits are checked separately
+        Instruction? firstInstructionToCommit = instructions?.FirstOrDefault(i => i.Commit is null && i.WriteBack is not null && CurrentCycle > i.WriteBack);
+        if (firstInstructionToCommit is null) return;
+
+        int firstInstructionToCommitIndex = instructions!.IndexOf(firstInstructionToCommit);
+
+        //ALL previous instructions must be committed or else there should be no commits
+        if (instructions.Take(firstInstructionToCommitIndex).Any(i => i.Commit is null)) return;
+
+        firstInstructionToCommit.Commit = CurrentCycle;
+        Console.WriteLine($"  Commiting command '{firstInstructionToCommit.Command}'...");
+
+        for (int i = 1; i <= _issuesPerCycle - 1; i++)
+        {
+            var nextInstruction = instructions[i + firstInstructionToCommitIndex];
+            if (nextInstruction.WriteBack is null || nextInstruction.WriteBack <= CurrentCycle) break;
+
+            //can commit now!
+            nextInstruction.Commit = CurrentCycle;
+            Console.WriteLine($"  Commiting command '{nextInstruction.Command}'...");
         }
     }
 
