@@ -16,7 +16,7 @@ var app = App.GetApp();
 // or 
 //var settings = app.Services.GetRequiredService<IOptions<ScenarioPaths>>().Value;
 
-var loader = app.Services.GetTomasuloScenarioLoader();
+var loader = app.Services.GetTomasuloScenarioReader();
 var paths = app.Services.GetTomasuloScenarioPaths();
 
 if(!string.IsNullOrWhiteSpace(paths.SelectedPath))

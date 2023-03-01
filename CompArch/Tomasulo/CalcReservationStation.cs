@@ -56,7 +56,8 @@ public class CalcReservationStation : ReservationStation
         if (loadQkFound is not null)
         {
             Qk = loadQkFound;
-            Instruction.Comment += $"Depends on {Qk.Name} ({Parent.Instructions.IndexOf(Qk.Instruction) + 1})";
+            Instruction.Comment += (Instruction.Comment is null ? "Depends" :" and") + 
+                $" on {Qk.Name} ({Parent.Instructions.IndexOf(Qk.Instruction) + 1})";
         }
         else Vk = instruction.Operand3;
 

@@ -15,13 +15,13 @@ public enum TomasuloScenarios
     Basic,
 }
 
-public class ScenarioLoader
+public class TomasuloScenarioReader
 {
     private readonly Tomasulo _tomasulo;
     private readonly IConfiguration _configuration;
     private readonly ScenarioReader _reader;
 
-    public ScenarioLoader(Tomasulo tomasulo,
+    public TomasuloScenarioReader(Tomasulo tomasulo,
         IConfiguration configuration,
         ScenarioReader reader)
     {
@@ -58,7 +58,7 @@ public class ScenarioLoader
 
         List<string> registers = Enumerable.Range(1, 8).Select(i => $"R{i}").ToList();
 
-        _tomasulo.SetCode(code, registers, executionTimes, 1, 1, 5);
+        _tomasulo.SetCode(code, registers, executionTimes, 1, 1, 1, 1);
 
         _tomasulo.Run();
     }
@@ -103,11 +103,13 @@ MUL R5,R4,R8
         var settings = _reader.ReadFile(scenarioFile);
         int issuesPerCycle = 1;
         int commitsPerCycle = 1;
+        int writeBacksPerCycle = 1;
         if (settings.ContainsKey("main"))
         {
             var dictionary = _reader.BlockToDictionary(settings["main"]);
             issuesPerCycle = int.Parse(dictionary["issuesPerCycle"]);
             commitsPerCycle = int.Parse(dictionary["commitsPerCycle"]);
+            writeBacksPerCycle = int.Parse(dictionary["writeBacksPerCycle"]);
         }
 
         Dictionary<string, int> functionalUnitsCount = new Dictionary<string, int>();
@@ -242,7 +244,8 @@ MUL R5,R4,R8
         //we should verify that instructions are include the required register
         _tomasulo.SetCode(code, registers, executionTimes,
             issuesPerCycle: issuesPerCycle,
-            commitsPerCycle: commitsPerCycle);
+            commitsPerCycle: commitsPerCycle,
+            writeBacksPerCycle: writeBacksPerCycle);
 
         _tomasulo.Run();
     }

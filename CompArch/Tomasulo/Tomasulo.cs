@@ -1,19 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Http.Headers;
-using System.Reflection.Metadata;
-using System.Security;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-
-namespace CompArch.Tomasulo;
+﻿namespace CompArch.Tomasulo;
 public class Tomasulo
 {
-
-
     #region Register file
 
     public List<string> Registers { get; private set; }
@@ -116,6 +103,9 @@ public class Tomasulo
     int _commitsPerCycle = 1;
     public int CommitsPerCycle { get => _commitsPerCycle; }
 
+    int _writeBacksPerCycle = 1;
+    public int WriteBacksPerCycle { get => _writeBacksPerCycle; }
+
 
     List<Instruction>? instructions;
     public List<Instruction>? Instructions { get => instructions; }
@@ -139,7 +129,8 @@ public class Tomasulo
         Dictionary<string, int> executionTimes,
         int issuesPerCycle = 1,
         int issueDuration = 1,
-        int commitsPerCycle = 1)
+        int commitsPerCycle = 1,
+        int writeBacksPerCycle = 1)
     {
         this.instructions = code.Trim().Split("\r\n").Select(l => new Instruction(l)).ToList();
 
@@ -161,6 +152,7 @@ public class Tomasulo
         _issuesPerCycle = issuesPerCycle;
         _issueDuration = issueDuration;
         _commitsPerCycle = commitsPerCycle;
+        _writeBacksPerCycle = writeBacksPerCycle;
         // _writeBackDuration = writeBackDuration;
 
 
