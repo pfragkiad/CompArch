@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace CompArch.Tomasulo;
+namespace CompArch.TomasuloLibrary;
 
 public class ScenarioPaths
 {

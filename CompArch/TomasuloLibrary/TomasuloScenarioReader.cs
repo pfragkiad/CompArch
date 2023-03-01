@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace CompArch.Tomasulo;
+namespace CompArch.TomasuloLibrary;
 
 public enum TomasuloScenarios
 {

@@ -1,4 +1,4 @@
-﻿namespace CompArch.Tomasulo;
+﻿namespace CompArch.TomasuloLibrary;
 public class Tomasulo
 {
     #region Register file

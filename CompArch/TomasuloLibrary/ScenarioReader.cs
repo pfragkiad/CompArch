@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CompArch.Tomasulo;
+namespace CompArch.TomasuloLibrary;
 public class ScenarioReader
 {
     private readonly ILogger<ScenarioReader> _logger;

@@ -1,4 +1,4 @@
-﻿using CompArch.Tomasulo;
+﻿using CompArch.TomasuloLibrary;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -15,7 +15,7 @@ public static class App
         {
             services
             .AddSingleton<BranchPredictor>()
-            .AddSingleton<Tomasulo.Tomasulo>()
+            .AddSingleton<Tomasulo>()
             .AddSingleton<ScenarioReader>()
             .AddSingleton<TomasuloScenarioReader>()
 
