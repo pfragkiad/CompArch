@@ -1,7 +1,7 @@
 ﻿//TODO: Put full settings to file.
 //TODO: Load with dependencies.
 //TODO: CDB priority with maximum concurrent WBs (writeBacksPerCycle too)
-//TODO: ROB/Commit
+//TODO: ROB capacity
 
 
 var app = App.GetApp();

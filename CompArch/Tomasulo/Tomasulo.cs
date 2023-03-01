@@ -173,7 +173,7 @@ public class Tomasulo
 
     public int CurrentCycle { get; private set; }
 
-    public Queue<Instruction> InstructionsQueue { get; private set; }
+    public Queue<Instruction> InstructionsQueue { get; private set; } = new Queue<Instruction>();
 
     public void Run()
     {
@@ -193,7 +193,7 @@ public class Tomasulo
 
         List<Instruction> instructionsWaitingForRS = new List<Instruction>();
 
-        while (InstructionsQueue.Any() || AllReservationStations.Any(s => s.IsBusy) || Instructions.Any(i=>i.Commit is null))
+        while (InstructionsQueue.Any() || AllReservationStations.Any(s => s.IsBusy) || Instructions.Any(i => i.Commit is null))
         {
             //if there is a non-issed instruction then STALL until its corresponding RS is ready
             do
@@ -329,7 +329,7 @@ public class Tomasulo
 
     private void CheckForCommits()
     {
-        //the commits are checked separately
+        //the commits are checked at the end of each cycle - 
         Instruction? firstInstructionToCommit = instructions?.FirstOrDefault(i => i.Commit is null && i.WriteBack is not null && CurrentCycle > i.WriteBack);
         if (firstInstructionToCommit is null) return;
 
@@ -338,17 +338,22 @@ public class Tomasulo
         //ALL previous instructions must be committed or else there should be no commits
         if (instructions.Take(firstInstructionToCommitIndex).Any(i => i.Commit is null)) return;
 
-        firstInstructionToCommit.Commit = CurrentCycle;
-        Console.WriteLine($"  Commiting command '{firstInstructionToCommit.Command}'...");
+        var candidateInstructionsToCommit = instructions
+            .Skip(firstInstructionToCommitIndex)
+            //this is the maximum value (it can be less if we are at the end of the list)
+            .Take(_commitsPerCycle); 
 
-        for (int i = 1; i <= _issuesPerCycle - 1; i++)
+        //for (int i = firstInstructionToCommitIndex;
+        //    i <= Math.Min(firstInstructionToCommitIndex + _commitsPerCycle,instructions.Count) - 1; i++)
+        //{
+        //var instruction = instructions[i];
+        foreach (var instruction in candidateInstructionsToCommit)
         {
-            var nextInstruction = instructions[i + firstInstructionToCommitIndex];
-            if (nextInstruction.WriteBack is null || nextInstruction.WriteBack <= CurrentCycle) break;
+            if (instruction.WriteBack is null || instruction.WriteBack >= CurrentCycle) break;
 
             //can commit now!
-            nextInstruction.Commit = CurrentCycle;
-            Console.WriteLine($"  Commiting command '{nextInstruction.Command}'...");
+            instruction.Commit = CurrentCycle;
+            Console.WriteLine($"  Commiting command '{instruction.Command}'...");
         }
     }
 
